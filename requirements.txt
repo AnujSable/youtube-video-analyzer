@@ -1,0 +1,6 @@
+agno
+google-genai
+python-dotenv
+streamlit
+youtube-transcript-api
+yt-dlp
