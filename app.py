@@ -1,20 +1,18 @@
 import streamlit as st
 from textwrap import dedent
+import time
 from dotenv import load_dotenv
 from agno.agent import Agent
 from agno.models.google import Gemini
 from agno.tools.youtube import YouTubeTools
 
-# Load environment variables (.env file)
 load_dotenv()
 
-# Streamlit Page Setup
 st.set_page_config(page_title="AI YouTube Video Analyzer", page_icon="🎥", layout="wide")
 
 st.title("🎥 AI YouTube Video Analyzer")
 st.write("Extract structured overviews, precise timestamps, and key insights from any YouTube video instantly!")
 
-# Sidebar Configuration for Customization
 st.sidebar.header("⚙️ Analysis Settings")
 analysis_mode = st.sidebar.selectbox(
     "Choose Analysis Style",
@@ -25,7 +23,6 @@ analysis_mode = st.sidebar.selectbox(
     ]
 )
 
-# Customize instructions based on sidebar selection
 if analysis_mode == "Quick Executive Summary":
     custom_instructions = "Provide a concise executive summary of the video, highlighting the top 3-5 core takeaways without long timestamp breakdowns."
 elif analysis_mode == "Key Study Notes & Takeaways":
@@ -49,40 +46,51 @@ else:
            - Track topic progression
     """)
 
-# Input field for YouTube URL
 video_url = st.text_input("Enter YouTube Video URL:", placeholder="https://www.youtube.com/watch?v=...")
+
+# Models list to fall back on if one suffers a 503 spike
+GEMINI_MODELS = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
 
 if st.button("Analyze Video", type="primary"):
     if video_url:
         with st.spinner("Analyzing video content... This may take a few seconds ⏳"):
-            try:
-                # Initialize Agent with the working model ID
-                youtube_agent = Agent(
-                    name="YouTube Agent",
-                    model=Gemini(id="gemini-3.8-flash"),
-                    tools=[YouTubeTools()],
-                    instructions=custom_instructions,
-                    add_datetime_to_context=True,
-                    markdown=True,
-                )
+            response_content = None
+            last_error = None
 
-                # Run the agent and get response content
-                response = youtube_agent.run(f"Analyze this video: {video_url}")
+            # Attempt execution with model fallback and automatic retry
+            for model_id in GEMINI_MODELS:
+                for attempt in range(2):  # Try twice per model
+                    try:
+                        agent = Agent(
+                            name="YouTube Agent",
+                            model=Gemini(id=model_id),
+                            tools=[YouTubeTools()],
+                            instructions=custom_instructions,
+                            add_datetime_to_context=True,
+                            markdown=True,
+                        )
+                        res = agent.run(f"Analyze this video: {video_url}")
+                        response_content = res.content
+                        break
+                    except Exception as e:
+                        last_error = e
+                        time.sleep(2)  # Short pause before retrying
+                
+                if response_content:
+                    break
 
-                # Display Results in Streamlit
+            if response_content:
                 st.success("Analysis Complete!")
                 st.markdown("---")
-                st.markdown(response.content)
+                st.markdown(response_content)
 
-                # Add a Download Button for the Report
                 st.download_button(
                     label="📥 Download Analysis Report",
-                    data=response.content,
+                    data=response_content,
                     file_name="youtube_analysis_report.md",
                     mime="text/markdown",
                 )
-
-            except Exception as e:
-                st.error(f"An error occurred: {e}")
+            else:
+                st.error(f"Google Gemini service is temporarily overloaded. Please wait 10 seconds and try again. Error: {last_error}")
     else:
         st.warning("Please enter a valid YouTube URL before clicking analyze.")
