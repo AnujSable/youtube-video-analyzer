@@ -48,8 +48,7 @@ else:
 
 video_url = st.text_input("Enter YouTube Video URL:", placeholder="https://www.youtube.com/watch?v=...")
 
-# Models list to fall back on if one suffers a 503 spike
-GEMINI_MODELS = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
+GEMINI_MODELS = ["gemini-3.8-flash", "gemini-3.5-flash"]
 
 if st.button("Analyze Video", type="primary"):
     if video_url:
@@ -57,9 +56,8 @@ if st.button("Analyze Video", type="primary"):
             response_content = None
             last_error = None
 
-            # Attempt execution with model fallback and automatic retry
             for model_id in GEMINI_MODELS:
-                for attempt in range(2):  # Try twice per model
+                for attempt in range(2):
                     try:
                         agent = Agent(
                             name="YouTube Agent",
@@ -74,7 +72,7 @@ if st.button("Analyze Video", type="primary"):
                         break
                     except Exception as e:
                         last_error = e
-                        time.sleep(2)  # Short pause before retrying
+                        time.sleep(2)
                 
                 if response_content:
                     break
@@ -91,6 +89,6 @@ if st.button("Analyze Video", type="primary"):
                     mime="text/markdown",
                 )
             else:
-                st.error(f"Google Gemini service is temporarily overloaded. Please wait 10 seconds and try again. Error: {last_error}")
+                st.error(f"Error communicating with Gemini API: {last_error}")
     else:
         st.warning("Please enter a valid YouTube URL before clicking analyze.")
