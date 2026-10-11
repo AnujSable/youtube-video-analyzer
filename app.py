@@ -10,7 +10,7 @@ load_dotenv()
 
 st.set_page_config(page_title="AI YouTube Video Analyzer", page_icon="🎥", layout="wide")
 
-st.title("🎥 AI YouTube Video Analyzer")
+st.title("🎥 AI Based YouTube Video Analyzer")
 st.write("Extract structured overviews, precise timestamps, and key insights from any YouTube video instantly!")
 
 st.sidebar.header("⚙️ Analysis Settings")
