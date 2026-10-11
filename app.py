@@ -48,11 +48,12 @@ else:
 
 video_url = st.text_input("Enter YouTube Video URL:", placeholder="https://www.youtube.com/watch?v=...")
 
-GEMINI_MODELS = ["gemini-3.8-flash", "gemini-3.5-flash"]
+# Robust fallback model list to bypass 503 capacity spikes
+GEMINI_MODELS = ["gemini-3.8-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
 
 if st.button("Analyze Video", type="primary"):
     if video_url:
-        with st.spinner("Analyzing video content... This may take a few seconds ⏳"):
+        with st.spinner("Analyzing video content... If servers are busy, this will try alternative models ⏳"):
             response_content = None
             last_error = None
 
@@ -72,7 +73,7 @@ if st.button("Analyze Video", type="primary"):
                         break
                     except Exception as e:
                         last_error = e
-                        time.sleep(2)
+                        time.sleep(1.5)
                 
                 if response_content:
                     break
@@ -89,6 +90,6 @@ if st.button("Analyze Video", type="primary"):
                     mime="text/markdown",
                 )
             else:
-                st.error(f"Error communicating with Gemini API: {last_error}")
+                st.error("Google Gemini is experiencing high traffic across all fallback models. Please wait 15 seconds and click 'Analyze Video' again.")
     else:
         st.warning("Please enter a valid YouTube URL before clicking analyze.")
